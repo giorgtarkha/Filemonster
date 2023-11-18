@@ -1,0 +1,12 @@
+* {
+    font-family: var(--font-family);
+    color: var(--text-color);
+    background-color: var(--background-color);
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: auto;
+    height: 100vh;
+}

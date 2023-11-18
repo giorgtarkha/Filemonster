@@ -1,0 +1,21 @@
+.directory-view {
+    width: auto;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+
+    font-family: var(--font-family);
+    color: var(--text-color);
+}
+
+.directory-view-item {
+    display: flex;
+    user-select: none;
+    color: var(--text-color);
+    background-color: var(--background-color);
+}
+
+.directory-view-item.selected-item {
+    background-color: var(--background-color-hover);
+}
