@@ -1,5 +1,6 @@
 import { CreateDiv } from "./dom";
 import { DIRECTORY_ITEM_TYPE_DIRECTORY, DIRECTORY_ITEM_TYPE_DIRECTORY_GOBACK, DirectoryItem } from "./fs";
+import { SingleActionLock } from "./lock";
 import { ChangeDirectory, ChangeDirectoryResult } from "./protocol";
 import { ApplyStyleConfiguration, StyleConfiguration } from "./style";
 
@@ -30,7 +31,7 @@ interface View {
     /**
      * Keyboard methods.
      */
-    handleKeyDown(key: String, code: String): void;
+    handleKeyDown(key: String, code: String): Promise<void>;
 }
 
 const DIRECTORY_VIEW_CLASS: string = "directory-view";
@@ -69,6 +70,11 @@ class DirectoryView implements View {
      */
     container: HTMLElement;
 
+    /**
+     * Lock used for concurrent syncs/updates.
+     */
+    actionLock: SingleActionLock; // TODO revisit
+
     constructor(id: number, currentDirectory: string) {
         this.id = id;
         this.currentDirectory = currentDirectory;
@@ -80,6 +86,7 @@ class DirectoryView implements View {
                 DIRECTORY_VIEW_CLASS
             ],
         });
+        this.actionLock = new SingleActionLock();
     }
 
     async init(): Promise<void> {
@@ -89,7 +96,7 @@ class DirectoryView implements View {
         this.state = ViewState.INITIALIZED;
     }
 
-    render(parentElement: Node | null = null): void {
+    render(parentElement: Node | null = null): void { // TODO revisit
         while (this.container.firstChild) {
             this.container.removeChild(this.container.firstChild);
         }
@@ -119,29 +126,50 @@ class DirectoryView implements View {
         ApplyStyleConfiguration(this.container, styleConfiguration);
     }
     
-    onItemClick(index: number): void {
-        this.selectDirectoryItem(index);
+    async onItemClick(index: number): Promise<void> {
+        try {
+            await this.actionLock.acquire();
+            this.selectDirectoryItem(index);
+        } catch (e: any) {
+            return;
+        } finally {
+            this.actionLock.release();
+        }
     }
 
-    onItemDoubleClick(index: number): void {
-        this.onItemChoice(index);
+    async onItemDoubleClick(index: number): Promise<void> {
+        try {
+            await this.actionLock.acquire();
+            this.onItemChoice(index);
+        } catch (e: any) {
+            return;
+        } finally {
+            this.actionLock.release();
+        }
     }
 
-    handleKeyDown(key: String, code: String): void {
-        if (key === "ArrowDown") {
-            if (this.pointingAtIndex < this.directoryItems.length) {
-                this.selectDirectoryItem(this.pointingAtIndex + 1);
+    async handleKeyDown(key: String, code: String): Promise<void> {
+        try {
+            await this.actionLock.acquire();
+            if (key === "ArrowDown") {
+                if (this.pointingAtIndex < this.directoryItems.length) {
+                    this.selectDirectoryItem(this.pointingAtIndex + 1);
+                }
+            } else if (key === "ArrowUp") {
+                if (this.pointingAtIndex > 0) {
+                    this.selectDirectoryItem(this.pointingAtIndex - 1);
+                }
+            } else if (key === "Enter") {
+                this.onItemChoice(this.pointingAtIndex);
+            } else if (key === "End" || code === "Numpad1") {
+                this.selectDirectoryItem(this.directoryItems.length - 1);
+            } else if (key === "Home" || code === "Numpad7") {
+                this.selectDirectoryItem(0);
             }
-        } else if (key === "ArrowUp") {
-            if (this.pointingAtIndex > 0) {
-                this.selectDirectoryItem(this.pointingAtIndex - 1);
-            }
-        } else if (key === "Enter") {
-            this.onItemChoice(this.pointingAtIndex);
-        } else if (key === "End" || code === "Numpad1") {
-            this.selectDirectoryItem(this.directoryItems.length - 1);
-        } else if (key === "Home" || code === "Numpad7") {
-            this.selectDirectoryItem(0);
+        } catch (e: any) {
+            return;
+        } finally {
+            this.actionLock.release();
         }
     }
 
@@ -154,7 +182,6 @@ class DirectoryView implements View {
     }
 
     selectDirectoryItem(index: number): void {
-        console.log(index);
         const directoryItem = this.container.querySelector(`#${this.getDirectoryItemId(index)}`);
         if (!directoryItem) { return; }
         const currentlySelected = this.container.querySelector(`.${SELECTED_ITEM_CLASS}`);
