@@ -1,0 +1,40 @@
+.directory-container {
+    width: auto;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.directory-header-container {
+    height: 30px;
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+}
+
+.directory-items-container {
+    width: auto;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.directory-item {
+    display: flex;
+    user-select: none;
+    color: var(--text-color);
+    background-color: var(--background-color);
+}
+
+.directory-item-type-file {
+    color: var(--directory-item-file-color);
+}
+
+.directory-item-type-directory {
+    color: var(--directory-item-directory-color);
+}
+
+.directory-item.selected-item {
+    background-color: var(--background-color-hover);
+}
